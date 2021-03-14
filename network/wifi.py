@@ -10,7 +10,7 @@ html0 = '''<!DOCTYPE html><html><meta charset="UTF-8"><meta http-equiv="X-UA-Com
 
 html1 = '''<!DOCTYPE html><html><body>success</body></html>'''
 
-html2 = '''<!DOCTYPE html><html><body>Ssid or password was wrong!!! Please try again.</body></html>'''
+html2 = '''<!DOCTYPE html><html><body>This ssid or password was wrong!!! Please try again.</body></html>'''
 
 
 def _html_sever():
@@ -142,6 +142,8 @@ def _connect_wifi(ssid, password):
 
 def do_connect():
     '''
+    优先连接本地保存的wifi，如果连接不上，则开启一个名为“wifi-config”的热点，
+    连接上热点后，浏览器访问192.168.4.1输入要连接的WiFi信息
     若连接成功，打印接口的IP/netmask/gw/DNS地址,返回True；
     若连接失败，返回False。
     '''
@@ -159,3 +161,16 @@ def do_connect():
             _html_sever()
         except:
             return False
+
+
+def do_connect_local():
+    '''
+    只连接本地保存的热点，直到连接上为止。
+    '''
+
+    is_connected = False
+    wifi_config = _get_wifi_config()
+
+    while not is_connected:
+        is_connected = _connect_wifi(
+            wifi_config['ssid'], wifi_config['password'])
