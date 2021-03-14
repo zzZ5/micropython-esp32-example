@@ -165,7 +165,7 @@ def do_connect():
 
 def do_connect_local():
     '''
-    只连接本地保存的热点，直到连接上为止。
+    只连接本地保存的wifi，直到连接上为止。
     '''
 
     is_connected = False
