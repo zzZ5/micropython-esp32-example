@@ -1,8 +1,14 @@
+from typing import Text
 from mqtt import MQTTClient
 import utime
 import network
 import ujson
 from machine import Pin
+
+user = ''
+client_id = ''
+password = ''
+
 
 pin2 = Pin(2, Pin.OUT, value=1)
 wifi_name = 'CU'
@@ -38,8 +44,8 @@ def sub_cb(topic, msg):  # 回调函数，收到服务器消息后会调用这�
 
 do_connect(wifi_name, wifi_password)
 # 建立一个MQTT客户端
-c = MQTTClient(client_id='123', server='118.25.108.254',
-               port=0, user='test', password='123456')
+c = MQTTClient(client_id=client_id, server='118.25.108.254',
+               port=1883, user=user, password=password)
 c.set_callback(sub_cb)  # 设置回调函数
 c.connect()  # 建立连接
 c.subscribe(b"test_topic")  # 监控pin2ctl这个通道，接收控制命令
