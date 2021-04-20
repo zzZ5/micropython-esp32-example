@@ -9,3 +9,6 @@
 * 继电器控制（switch-control）
 * esp32固件（esp32-firmware）
 * esp32编辑器（esp32-editor）
+
+其他：
+* [Micropython esp32官方文档](http://docs.micropython.org/en/latest/esp32/quickref.html)
