@@ -75,7 +75,7 @@ class MyIotPrj:
                 print(dht_data)
                 await self.client.publish(self.topic_sta, json.dumps(dht_data), retain=True)
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
 
         while True:
             if self.isconn == True:
