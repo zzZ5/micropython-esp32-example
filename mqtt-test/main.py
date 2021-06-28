@@ -31,6 +31,7 @@ class MyIotPrj:
 
     async def sub_callback(self, topic, msg):
         print((topic, msg))
+        msg.split('')
 
     async def mqtt_main_thread(self):
 
