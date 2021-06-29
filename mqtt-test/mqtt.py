@@ -190,7 +190,7 @@ class MQTTClient:
         if res is None:
             return None
         if res == b"":
-            print("res is empty!")
+            # print("res is empty!")
             #raise OSError(-1)
             return None
         if res == b"\xd0":  # PINGRESP

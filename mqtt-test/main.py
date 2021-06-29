@@ -5,18 +5,38 @@ import ujson as json
 
 class MyIotPrj:
     def __init__(self):
-        mqtt_user = 'test'
-        mqtt_password = '12345678'
-        client_id = 'test2222'
+        mqtt_user = 'equipment'
+        mqtt_password = 'ZNXK8888'
+        client_id = 'test'
         wifi_name = 'HW'
         wifi_password = 'ZNXK8888'
         self.mserver = '118.25.108.254'
+        equipment_key = '0zICTv4iVI'
+        self.cmd_lib = {
+            'cmd': self.handle_cmd,
+            'heater': self.handle_heater,
+        }
         self.wlan_connect(wifi_name, wifi_password)
         self.client = MQTTClient(
             client_id, self.mserver, user=mqtt_user, password=mqtt_password)
         self.isconn = False
-        self.topic_ctl = b'topic/test'
-        self.topic_sta = b'topic/test'
+        self.topic_ctl = 'topic/{}'.format(equipment_key).encode()
+        self.topic_sta = 'topic/test'.encode()
+
+    def handle_cmd(self, cmd):
+        print('heater:{}'.format(cmd))
+
+    def handle_heater(self, cmd):
+        print('cmd:{}'.format(cmd))
+
+    def do_cmd(self, cmd):
+        try:
+            cmd = cmd.decode()
+            cmd_key, cmd_value, _ = cmd.split("|")
+            handle = self.cmd_lib[cmd_key]
+            handle(cmd_value)
+        except:
+            print('error')
 
     def wlan_connect(self, ssid='MYSSID', password='MYPASS'):
         import network
@@ -31,7 +51,7 @@ class MyIotPrj:
 
     async def sub_callback(self, topic, msg):
         print((topic, msg))
-        msg.split('')
+        self.do_cmd(msg)
 
     async def mqtt_main_thread(self):
 
@@ -64,8 +84,8 @@ class MyIotPrj:
     async def mqtt_upload_thread(self):
         #        my_dht = dht.DHT11(Pin(14, Pin.IN))
         dht_data = {
-            'temperature': 0,
-            'humidity': 0
+            'temperature': 1,
+            'humidity': 1
         }
 
         while True:
@@ -74,9 +94,9 @@ class MyIotPrj:
                 #  dht_data['temperature'] = my_dht.temperature()
                 #  dht_data['humidity']    = my_dht.humidity()
                 print(dht_data)
-                await self.client.publish(self.topic_sta, json.dumps(dht_data), retain=True)
+                await self.client.publish(self.topic_sta, json.dumps(dht_data), retain=False)
 
-            await asyncio.sleep(10)
+            await asyncio.sleep(60)
 
         while True:
             if self.isconn == True:
