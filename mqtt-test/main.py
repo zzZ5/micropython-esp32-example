@@ -1,4 +1,7 @@
 from mqtt import MQTTClient
+
+import machine
+import utime as time
 import uasyncio as asyncio
 import ujson as json
 
@@ -20,23 +23,32 @@ class MyIotPrj:
         self.client = MQTTClient(
             client_id, self.mserver, user=mqtt_user, password=mqtt_password)
         self.isconn = False
-        self.topic_ctl = 'topic/{}'.format(equipment_key).encode()
-        self.topic_sta = 'topic/test'.encode()
+        self.topic_ctl = b'topic/0zICTv4iVI'
+        self.topic_sta = b'topic/test'
 
     def handle_cmd(self, cmd):
-        print('heater:{}'.format(cmd))
+        print('cmd:{}'.format(cmd))
+        if cmd == "reset":
+            time.sleep_ms(1)
+            machine.reset()
+        elif cmd == "soft_reset":
+            time.sleep_ms(1)
+            machine.soft_reset()
+        else:
+            pass
 
     def handle_heater(self, cmd):
-        print('cmd:{}'.format(cmd))
+        print('heater:{}'.format(cmd))
 
     def do_cmd(self, cmd):
         try:
-            cmd = cmd.decode()
-            cmd_key, cmd_value, _ = cmd.split("|")
-            handle = self.cmd_lib[cmd_key]
-            handle(cmd_value)
+            cmd_dict = json.loads(cmd)
+            for key, value in cmd_dict.items():
+                if key in self.cmd_lib.keys():
+                    handle = self.cmd_lib[key]
+                    handle(value)
         except:
-            print('error')
+            print('cmd error')
 
     def wlan_connect(self, ssid='MYSSID', password='MYPASS'):
         import network
@@ -65,8 +77,8 @@ class MyIotPrj:
             print('conn_ret_code = {0}'.format(conn_ret_code))
 
             await self.client.subscribe(self.topic_ctl)
-            print("Connected to %s, subscribed to %s topic" %
-                  (self.mserver, self.topic_ctl))
+            print("Connected to {}, subscribed to {} topic".format(
+                self.mserver, self.topic_ctl))
 
             self.isconn = True
 
@@ -82,7 +94,7 @@ class MyIotPrj:
         self.isconn = False
 
     async def mqtt_upload_thread(self):
-        #        my_dht = dht.DHT11(Pin(14, Pin.IN))
+        # my_dht = dht.DHT11(Pin(14, Pin.IN))
         dht_data = {
             'temperature': 1,
             'humidity': 1
