@@ -1,9 +1,73 @@
 from mqtt import MQTTClient
 
+import ds18x20
 import machine
-import utime as time
+from machine import Timer
+import onewire
 import uasyncio as asyncio
 import ujson as json
+
+config = {
+
+}
+wifi_name = ''
+wifi_password = ''
+equipment_key = '0zICTv4iVI'
+keys = []
+ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
+ds = ds18x20.DS18X20(ow)
+
+
+def read_config():
+    with open("config.json") as f:
+        global config
+        config = json.load(f)
+        global wifi_name, wifi_password, keys
+        wifi_name = config['wifi_name']
+        wifi_password = config['wifi_password']
+        keys = config['keys']
+
+
+def sync_ntp(**kwargs):
+    """通过网络校准时间"""
+    import ntptime
+    ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
+    ntptime.host = 'ntp1.aliyun.com'  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
+    ntptime.settime()  # 修改设备时间,到这就已经设置好了
+
+
+def time_calibration():
+    timer = Timer(1)
+    timer.init(mode=Timer.PERIODIC, period=1000 * 60 *
+               60 * 7, callback=lambda t: sync_ntp())
+
+
+def wlan_connect(ssid, password):
+    import network
+    wlan = network.WLAN(network.STA_IF)
+    if not wlan.active() or not wlan.isconnected():
+        wlan.active(True)
+        print(ssid)
+        print(password)
+        print('connecting to:', ssid)
+        wlan.connect(ssid, password)
+        while not wlan.isconnected():
+            pass
+    print('network config:', wlan.ifconfig())
+
+
+def get_temp():
+    roms = ds.scan()  # 扫描总线上的设备
+    assert len(roms) == len(keys)
+    ds.convert_temp()  # 获取采样温度
+    for i, key in zip(roms, keys):
+        print(i, key)
+        yield ds.read_temp(i), key
+
+
+def get_time():
+    import utime as time
+    return "{}-{}-{} {}:{}:{}".format(*time.localtime())
 
 
 class MyIotPrj:
@@ -11,20 +75,16 @@ class MyIotPrj:
         mqtt_user = 'equipment'
         mqtt_password = 'ZNXK8888'
         client_id = 'test'
-        wifi_name = 'HW'
-        wifi_password = 'ZNXK8888'
         self.mserver = '118.25.108.254'
-        equipment_key = '0zICTv4iVI'
         self.cmd_lib = {
             'cmd': self.handle_cmd,
             'heater': self.handle_heater,
         }
-        self.wlan_connect(wifi_name, wifi_password)
         self.client = MQTTClient(
             client_id, self.mserver, user=mqtt_user, password=mqtt_password)
         self.isconn = False
-        self.topic_ctl = b'topic/0zICTv4iVI'
-        self.topic_sta = b'topic/test'
+        self.topic_ctl = 'topic/{}/response'.format(equipment_key).encode()
+        self.topic_sta = 'topic/{}/post'.format(equipment_key).encode()
 
     def handle_cmd(self, cmd):
         print('cmd:{}'.format(cmd))
@@ -49,17 +109,6 @@ class MyIotPrj:
                     handle(value)
         except:
             print('cmd error')
-
-    def wlan_connect(self, ssid='MYSSID', password='MYPASS'):
-        import network
-        wlan = network.WLAN(network.STA_IF)
-        if not wlan.active() or not wlan.isconnected():
-            wlan.active(True)
-            print('connecting to:', ssid)
-            wlan.connect(ssid, password)
-            while not wlan.isconnected():
-                pass
-        print('network config:', wlan.ifconfig())
 
     async def sub_callback(self, topic, msg):
         print((topic, msg))
@@ -94,19 +143,17 @@ class MyIotPrj:
         self.isconn = False
 
     async def mqtt_upload_thread(self):
-        # my_dht = dht.DHT11(Pin(14, Pin.IN))
-        dht_data = {
-            'temperature': 1,
-            'humidity': 1
-        }
 
         while True:
             if self.isconn == True:
-                #  my_dht.measure()
-                #  dht_data['temperature'] = my_dht.temperature()
-                #  dht_data['humidity']    = my_dht.humidity()
-                print(dht_data)
-                await self.client.publish(self.topic_sta, json.dumps(dht_data), retain=False)
+                datas = {"data": []}
+                for temp, key in get_temp():
+                    data = {"value": temp,
+                            "key": key,
+                            "measured_time": get_time()}
+                datas["data"].append(data)
+                print(datas)
+                await self.client.publish(self.topic_sta, json.dumps(datas), retain=False)
 
             await asyncio.sleep(60)
 
@@ -118,7 +165,9 @@ class MyIotPrj:
 
 def main():
     mip = MyIotPrj()
-
+    read_config()
+    wlan_connect(wifi_name, wifi_password)
+    time_calibration()
     loop = asyncio.get_event_loop()
     loop.create_task(mip.mqtt_main_thread())
     loop.create_task(mip.mqtt_upload_thread())
