@@ -6,6 +6,7 @@ from machine import Timer
 import onewire
 import uasyncio as asyncio
 import ujson as json
+import utime as time
 
 config = {
 
@@ -14,6 +15,8 @@ wifi_name = ''
 wifi_password = ''
 equipment_key = '0zICTv4iVI'
 keys = []
+value_skip = [85.0]
+time_interval = 60
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)
 
@@ -28,18 +31,18 @@ def read_config():
         keys = config['keys']
 
 
-def sync_ntp(**kwargs):
+def sync_ntp():
     """通过网络校准时间"""
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
     ntptime.host = 'ntp1.aliyun.com'  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
-    ntptime.settime()  # 修改设备时间,到这就已经设置好了
-
-
-def time_calibration():
-    timer = Timer(1)
-    timer.init(mode=Timer.PERIODIC, period=1000 * 60 *
-               60 * 7, callback=lambda t: sync_ntp())
+    while True:
+        try:
+            ntptime.settime()  # 修改设备时间,到这就已经设置好了
+            break
+        except:
+            time.sleep_ms(100)
+            continue
 
 
 def wlan_connect(ssid, password):
@@ -63,11 +66,6 @@ def get_temp():
     for i, key in zip(roms, keys):
         print(i, key)
         yield ds.read_temp(i), key
-
-
-def get_time():
-    import utime as time
-    return "{}-{}-{} {}:{}:{}".format(*time.localtime())
 
 
 class MyIotPrj:
@@ -137,25 +135,29 @@ class MyIotPrj:
                 print('wait_msg')
         finally:
             if self.client is not None:
-                print('off line')
-                await self.client.disconnect()
+                wlan_connect()
+                await self.client.connect()
 
         self.isconn = False
 
     async def mqtt_upload_thread(self):
 
         while True:
+            t1 = time.ticks_ms()
             if self.isconn == True:
                 datas = {"data": []}
                 for temp, key in get_temp():
+                    if temp in value_skip:
+                        continue
                     data = {"value": temp,
                             "key": key,
-                            "measured_time": get_time()}
-                datas["data"].append(data)
+                            "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                    datas["data"].append(data)
                 print(datas)
                 await self.client.publish(self.topic_sta, json.dumps(datas), retain=False)
-
-            await asyncio.sleep(60)
+            t2 = time.ticks_ms()
+            sleep_time = time_interval * 1000 - (t2 - t1)
+            await asyncio.sleep_ms(sleep_time)
 
         while True:
             if self.isconn == True:
@@ -167,7 +169,7 @@ def main():
     mip = MyIotPrj()
     read_config()
     wlan_connect(wifi_name, wifi_password)
-    time_calibration()
+    sync_ntp()
     loop = asyncio.get_event_loop()
     loop.create_task(mip.mqtt_main_thread())
     loop.create_task(mip.mqtt_upload_thread())
