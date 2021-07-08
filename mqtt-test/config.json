@@ -1,5 +1,8 @@
 {
     "wifi_name": "HW",
     "wifi_password": "ZNXK8888",
-    "keys": ["Hc6S0XcGHezsayD", "hdGBUpptdpYikzd"]
+    "keys": ["Hc6S0XcGHezsayD", "hdGBUpptdpYikzd"],
+    "value_skip":[85.0],
+    "time_interval": 60,
+    "ntp_host": "ntp1.aliyun.com"
 }

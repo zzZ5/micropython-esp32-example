@@ -2,7 +2,6 @@ from mqtt import MQTTClient
 
 import ds18x20
 import machine
-from machine import Timer
 import onewire
 import uasyncio as asyncio
 import ujson as json
@@ -11,12 +10,13 @@ import utime as time
 config = {
 
 }
+equipment_key = '0zICTv4iVI'
 wifi_name = ''
 wifi_password = ''
-equipment_key = '0zICTv4iVI'
 keys = []
 value_skip = [85.0]
 time_interval = 60
+ntp_host = ''
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)
 
@@ -25,17 +25,20 @@ def read_config():
     with open("config.json") as f:
         global config
         config = json.load(f)
-        global wifi_name, wifi_password, keys
+        global wifi_name, wifi_password, keys, value_skip, time_interval, ntp_host
         wifi_name = config['wifi_name']
         wifi_password = config['wifi_password']
         keys = config['keys']
+        value_skip = config['value_skip']
+        time_interval = config['time_interval']
+        ntp_host = config['ntp_host']
 
 
 def sync_ntp():
     """通过网络校准时间"""
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
-    ntptime.host = 'ntp1.aliyun.com'  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
+    ntptime.host = ntp_host  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
     while True:
         try:
             ntptime.settime()  # 修改设备时间,到这就已经设置好了
