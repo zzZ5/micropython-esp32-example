@@ -138,8 +138,8 @@ class MyIotPrj:
                 print('wait_msg')
         finally:
             if self.client is not None:
-                wlan_connect()
-                await self.client.connect()
+                print('off line')
+                await self.client.disconnect()
 
         self.isconn = False
 
