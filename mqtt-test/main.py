@@ -84,8 +84,9 @@ class MyIotPrj:
         self.client = MQTTClient(
             client_id, self.mserver, user=mqtt_user, password=mqtt_password)
         self.isconn = False
-        self.topic_ctl = 'topic/{}/response'.format(equipment_key).encode()
-        self.topic_sta = 'topic/{}/post'.format(equipment_key).encode()
+        self.topic_ctl = 'compostlab/{}/response'.format(
+            equipment_key).encode()
+        self.topic_sta = 'compostlab/{}/{}/{}'
 
     def handle_cmd(self, cmd):
         print('cmd:{}'.format(cmd))
@@ -157,7 +158,7 @@ class MyIotPrj:
                             "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
                     datas["data"].append(data)
                 print(datas)
-                await self.client.publish(self.topic_sta, json.dumps(datas), retain=False)
+                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
             t2 = time.ticks_ms()
             sleep_time = time_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
