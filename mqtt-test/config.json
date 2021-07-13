@@ -4,5 +4,5 @@
     "keys": ["Hc6S0XcGHezsayD", "hdGBUpptdpYikzd"],
     "value_skip":[85.0],
     "time_interval": 60,
-    "ntp_host": "ntp1.aliyun.com"
+    "ntp_host": "ntp.aliyun.com"
 }

@@ -34,6 +34,16 @@ def read_config():
         ntp_host = config['ntp_host']
 
 
+def update_config(new_config):
+    global config
+    for i in new_config.keys():
+        if i in config:
+            config[i] = new_config[i]
+    with open("config.json", 'w+') as f:
+        f.write(json.dumps(config))
+    read_config()
+
+
 def sync_ntp():
     """通过网络校准时间"""
     import ntptime
@@ -41,10 +51,11 @@ def sync_ntp():
     ntptime.host = ntp_host  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
     while True:
         try:
+            print('ntp...')
             ntptime.settime()  # 修改设备时间,到这就已经设置好了
             break
         except:
-            time.sleep_ms(100)
+            time.sleep(2)
             continue
 
 
@@ -67,7 +78,6 @@ def get_temp():
     assert len(roms) == len(keys)
     ds.convert_temp()  # 获取采样温度
     for i, key in zip(roms, keys):
-        print(i, key)
         yield ds.read_temp(i), key
 
 
@@ -80,7 +90,7 @@ class MyIotPrj:
         self.cmd_lib = {
             'cmd': self.handle_cmd,
             'heater': self.handle_heater,
-        }
+            'config': self.handle_config}
         self.client = MQTTClient(
             client_id, self.mserver, user=mqtt_user, password=mqtt_password)
         self.isconn = False
@@ -99,6 +109,9 @@ class MyIotPrj:
         else:
             pass
 
+    def handle_config(self, cmd):
+        update_config(cmd)
+
     def handle_heater(self, cmd):
         print('heater:{}'.format(cmd))
 
@@ -113,7 +126,6 @@ class MyIotPrj:
             print('cmd error')
 
     async def sub_callback(self, topic, msg):
-        print((topic, msg))
         self.do_cmd(msg)
 
     async def mqtt_main_thread(self):
