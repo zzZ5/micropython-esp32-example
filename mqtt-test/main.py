@@ -14,9 +14,11 @@ equipment_key = '0zICTv4iVI'
 wifi_name = ''
 wifi_password = ''
 keys = []
-value_skip = [85.0]
-time_interval = 60
-ntp_host = ''
+value_skip = []
+post_interval = 60
+ntp_host = []
+ntp_interval = 1000
+
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)
 
@@ -25,13 +27,14 @@ def read_config():
     with open("config.json") as f:
         global config
         config = json.load(f)
-        global wifi_name, wifi_password, keys, value_skip, time_interval, ntp_host
+        global wifi_name, wifi_password, keys, value_skip, post_interval, ntp_host, ntp_interval
         wifi_name = config['wifi_name']
         wifi_password = config['wifi_password']
         keys = config['keys']
         value_skip = config['value_skip']
-        time_interval = config['time_interval']
+        post_interval = config['post_interval']
         ntp_host = config['ntp_host']
+        ntp_interval = config['ntp_interval']
 
 
 def update_config(new_config):
@@ -48,15 +51,18 @@ def sync_ntp():
     """通过网络校准时间"""
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
-    ntptime.host = ntp_host  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
-    while True:
-        try:
-            print('ntp...')
-            ntptime.settime()  # 修改设备时间,到这就已经设置好了
-            break
-        except:
-            time.sleep(2)
-            continue
+    is_setted = False
+    while not is_setted:
+        for host in ntp_host:
+            ntptime.host = host  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
+            try:
+                print('ntp:{}'.format(host))
+                ntptime.settime()  # 修改设备时间,到这就已经设置好了
+                is_setted = True
+                break
+            except:
+                time.sleep_ms(ntp_interval)
+                continue
 
 
 def wlan_connect(ssid, password):
@@ -153,6 +159,8 @@ class MyIotPrj:
             if self.client is not None:
                 print('off line')
                 await self.client.disconnect()
+                time.sleep_ms(1)
+                machine.reset()
 
         self.isconn = False
 
@@ -172,7 +180,7 @@ class MyIotPrj:
                 print(datas)
                 await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
             t2 = time.ticks_ms()
-            sleep_time = time_interval * 1000 - (t2 - t1)
+            sleep_time = post_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
 
         while True:
