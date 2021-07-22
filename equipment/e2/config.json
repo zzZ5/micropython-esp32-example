@@ -1,0 +1,10 @@
+{
+    "equipment_key": "D3Cq3kE8vU",
+    "wifi_name": "HW",
+    "wifi_password": "ZNXK8888",
+    "keys": ["Xl4Mos9s5MhXZvn", "vGBYIFOlAZCIYCe", "SEoZEtFCB34RKX6"],
+    "value_skip":[85.0, 25.0],
+    "post_interval": 60,
+    "ntp_host": ["ntp.aliyun.com", "cn.ntp.org.cn"],
+    "ntp_interval": 1000
+}
