@@ -3,6 +3,7 @@
 
 包括：
 * 温度测量实践（temperature）
+* 设备代码实践（equipment）
 * ds18b20并线温度测量（multi-ds18b20）
 * 优化连接网络（network）
 * mqtt数据传输（mqtt）
