@@ -53,6 +53,7 @@ def sync_ntp():
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
     is_setted = False
+    times = 0
     while not is_setted:
         for host in ntp_host:
             ntptime.host = host  # 可选，ntp服务器，默认是"pool.ntp.org" 这里使用阿里服务器
@@ -63,6 +64,10 @@ def sync_ntp():
                 break
             except:
                 time.sleep_ms(ntp_interval)
+                if times > 30:
+                    time.sleep_ms(1)
+                    machine.reset()
+                times += 1
                 continue
 
 
@@ -155,14 +160,14 @@ class MyIotPrj:
             while True:
                 await self.client.wait_msg()
                 await asyncio.sleep(1)
+        except:
+            time.sleep_ms(1)
+            machine.reset()
         finally:
             if self.client is not None:
-                time.sleep_ms(1)
-                machine.reset()
-                # print('off line')
-                # await self.client.disconnect()
-
-        # self.isconn = False
+                print('off line')
+                await self.client.disconnect()
+        self.isconn = False
 
     async def mqtt_upload_thread(self):
 
@@ -181,7 +186,6 @@ class MyIotPrj:
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
-
         while True:
             if self.isconn == True:
                 await self.client.ping()
