@@ -97,7 +97,7 @@ class MyIotPrj:
     def __init__(self):
         mqtt_user = 'equipment'
         mqtt_password = 'ZNXK8888'
-        client_id = 'test'
+        client_id = equipment_key
         self.mserver = '118.25.108.254'
         self.cmd_lib = {
             'cmd': self.handle_cmd,
