@@ -13,6 +13,9 @@ config = {
 equipment_key = ''
 wifi_name = ''
 wifi_password = ''
+mqtt_user = ''
+mqtt_password = ''
+mqtt_server = ''
 keys = []
 value_skip = []
 post_interval = 60
@@ -27,10 +30,13 @@ def read_config():
     with open("config.json") as f:
         global config
         config = json.load(f)
-        global equipment_key, wifi_name, wifi_password, keys, value_skip, post_interval, ntp_host, ntp_interval
+        global equipment_key, wifi_name, wifi_password, mqtt_user, mqtt_password, mqtt_server, keys, value_skip, post_interval, ntp_host, ntp_interval
         equipment_key = config['equipment_key']
         wifi_name = config['wifi_name']
         wifi_password = config['wifi_password']
+        mqtt_user = config['mqtt_user']
+        mqtt_password = config['mqtt_password']
+        mqtt_server = config['mqtt_server']
         keys = config['keys']
         value_skip = config['value_skip']
         post_interval = config['post_interval']
@@ -95,16 +101,16 @@ def get_temp():
 
 class MyIotPrj:
     def __init__(self):
-        mqtt_user = 'equipment'
-        mqtt_password = 'ZNXK8888'
-        client_id = equipment_key
-        self.mserver = '118.25.108.254'
+        self.user = mqtt_user
+        self.password = mqtt_password
+        self.client_id = equipment_key
+        self.mserver = mqtt_server
         self.cmd_lib = {
             'cmd': self.handle_cmd,
             'heater': self.handle_heater,
             'config': self.handle_config}
         self.client = MQTTClient(
-            client_id, self.mserver, user=mqtt_user, password=mqtt_password)
+            self.client_id, self.mserver, user=self.user, password=self.password)
         self.isconn = False
         self.topic_ctl = 'compostlab/{}/response'.format(
             equipment_key).encode()

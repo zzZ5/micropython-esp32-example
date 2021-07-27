@@ -1,12 +1,12 @@
 {
-    "equipment_key": "D3Cq3kE8vU",
+    "equipment_key": "5FkUv3eNSz",
     "wifi_name": "HW",
     "wifi_password": "ZNXK8888",
     "mqtt_user": "equipment",
     "mqtt_password": "ZNXK8888",
     "mqtt_server": "118.25.108.254",
-    "keys": ["Xl4Mos9s5MhXZvn", "vGBYIFOlAZCIYCe", "SEoZEtFCB34RKX6"],
-    "value_skip":[85.0, 25.0],
+    "keys": ["PXKdBD8S9nSKH5A", "RIsDoLKx5AzbgNy", "GAdLvYtPjvM0Ry0"],
+    "value_skip":[25.0, 85.0],
     "post_interval": 60,
     "ntp_host": ["ntp.aliyun.com", "cn.ntp.org.cn"],
     "ntp_interval": 1000
