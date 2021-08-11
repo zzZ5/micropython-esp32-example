@@ -7,6 +7,8 @@ import uasyncio as asyncio
 import ujson as json
 import utime as time
 
+
+# 参数设置
 config = {
 
 }
@@ -27,6 +29,10 @@ ds = ds18x20.DS18X20(ow)
 
 
 def read_config():
+    '''
+    提取配置文件。
+    '''
+
     with open("config.json") as f:
         global config
         config = json.load(f)
@@ -44,7 +50,15 @@ def read_config():
         ntp_interval = config['ntp_interval']
 
 
-def update_config(new_config):
+def update_config(new_config, restart=False):
+    '''
+    更新当前参数。
+
+    Args:
+        new_config: 新的设置字典。
+        restart: bool，更新参数后是否重启。
+    '''
+
     global config
     for i in new_config.keys():
         if i in config:
@@ -52,10 +66,16 @@ def update_config(new_config):
     with open("config.json", 'w+') as f:
         f.write(json.dumps(config))
     read_config()
+    if restart:
+        time.sleep_ms(1)
+        machine.soft_reset()
 
 
 def sync_ntp():
-    """通过网络校准时间"""
+    '''
+    通过网络校准时间。
+    '''
+
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
     is_setted = False
@@ -78,6 +98,14 @@ def sync_ntp():
 
 
 def wlan_connect(ssid, password):
+    '''
+    连接网络。
+
+    Args:
+        ssid: wifi名。
+        password: wifi密码。
+    '''
+
     import network
     wlan = network.WLAN(network.STA_IF)
     if not wlan.active() or not wlan.isconnected():
@@ -92,6 +120,11 @@ def wlan_connect(ssid, password):
 
 
 def get_temp():
+    '''
+    获取传感器温度数据。
+    扫描总线以及配置的keys，确保key和温度一一匹配。
+    '''
+
     roms = ds.scan()  # 扫描总线上的设备
     assert len(roms) == len(keys)
     ds.convert_temp()  # 获取采样温度
@@ -100,15 +133,22 @@ def get_temp():
 
 
 class MyIotPrj:
+    '''
+    物联网主程序，包括接收和发送数据。
+    '''
+
     def __init__(self):
         self.user = mqtt_user
         self.password = mqtt_password
         self.client_id = equipment_key
         self.mserver = mqtt_server
+
+        # 指令响应，针对不同的指令调用不同的方法。
         self.cmd_lib = {
             'cmd': self.handle_cmd,
             'heater': self.handle_heater,
             'config': self.handle_config}
+
         self.client = MQTTClient(
             self.client_id, self.mserver, user=self.user, password=self.password)
         self.isconn = False
@@ -147,7 +187,9 @@ class MyIotPrj:
         self.do_cmd(msg)
 
     async def mqtt_main_thread(self):
-
+        '''
+        主程序，主要负责连接mqtt服务器。订阅topic，接收数据。
+        '''
         try:
             self.client.set_callback(self.sub_callback)
 
@@ -176,7 +218,9 @@ class MyIotPrj:
         self.isconn = False
 
     async def mqtt_upload_thread(self):
-
+        '''
+        上传数据程序。主要负责传输数据到mqtt服务器。
+        '''
         while True:
             t1 = time.ticks_ms()
             if self.isconn == True:
@@ -204,6 +248,8 @@ def main():
     sync_ntp()
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
+
+    # 循环携程运行主程序和上传数据程序
     loop.create_task(mip.mqtt_main_thread())
     loop.create_task(mip.mqtt_upload_thread())
     loop.run_forever()
