@@ -1,7 +1,7 @@
-from ..pluginbase import TextProcessor
+from ..CmdProcessor import CmdProcessor
 
 
-@TextProcessor.plugin_register('plugin1')
-class CleanMarkdownBolds(object):
-    def process(self, text):
-        return text.replace('**', '')
+@CmdProcessor.plugin_register('plugin1')
+class Plugin1(object):
+    def process(self):
+        print('Plugin2 is running!')

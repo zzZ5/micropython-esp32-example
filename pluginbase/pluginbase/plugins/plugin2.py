@@ -1,7 +1,7 @@
-from ..pluginbase import TextProcessor
+from ..CmdProcessor import CmdProcessor
 
 
-@TextProcessor.plugin_register('plugin2')
-class CleanMarkdownItalic(object):
-    def process(self, text):
-        return text.replace('--', '')
+@CmdProcessor.plugin_register('plugin2')
+class Plugin2(object):
+    def process(self):
+        print('Plugin2 is running!')

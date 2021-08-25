@@ -1,6 +1,3 @@
-# mpyproject/app/platform.py
-
-
 class CmdProcessor(object):
     PLUGINS = {}
 
