@@ -8,6 +8,9 @@ import ujson as json
 import utime as time
 
 
+from reset import Reset
+from heater import Heater
+
 # 参数设置
 config = {
 
@@ -176,11 +179,7 @@ class MyIotPrj:
     def handle_cmd(self, cmd):
         print('cmd:{}'.format(cmd))
         if cmd == "reset":
-            time.sleep_ms(1)
-            machine.reset()
-        elif cmd == "soft_reset":
-            time.sleep_ms(1)
-            machine.soft_reset()
+            Reset().execute()
         else:
             pass
 
@@ -188,7 +187,12 @@ class MyIotPrj:
         update_config(cmd)
 
     def handle_heater(self, cmd):
-        print('heater:{}'.format(cmd))
+        if cmd == 'on':
+            Heater().execute()
+        elif cmd == 'off':
+            Heater().undo()
+        else:
+            pass
 
     def do_cmd(self, cmd):
         try:
@@ -266,9 +270,9 @@ def main():
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
 
-    # 循环携程运行主程序和上传数据程序
+    # 循环协程运行主程序和上传数据程序
     loop.create_task(mip.mqtt_main_thread())
-    loop.create_task(mip.mqtt_upload_thread())
+    # loop.create_task(mip.mqtt_upload_thread())
     loop.run_forever()
 
 
