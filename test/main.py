@@ -26,6 +26,7 @@ value_skip = []
 post_interval = 60
 ntp_host = []
 ntp_interval = 1000
+plugin = ['reset', 'heater']
 
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)
@@ -46,6 +47,10 @@ class RemoteControl():
     def on_command(self, button):
         # 当按键被触发时执行命令
         self.buttons[button].execute()
+
+
+def load_plugin():
+    pass
 
 
 def read_config():
@@ -70,6 +75,15 @@ def read_config():
         ntp_interval = config['ntp_interval']
 
 
+def save_command(file_name, content, restart=True):
+    print(file_name, content)
+    with open(file_name, 'w+') as f:
+        f.write(content)
+    if restart:
+        time.sleep_ms(1)
+        machine.reset()
+
+
 def update_config(new_config, restart=False):
     '''
     更新当前参数。
@@ -88,7 +102,7 @@ def update_config(new_config, restart=False):
     read_config()
     if restart:
         time.sleep_ms(1)
-        machine.soft_reset()
+        machine.reset()
 
 
 def sync_ntp():
@@ -167,7 +181,9 @@ class MyIotPrj:
         self.cmd_lib = {
             'cmd': self.handle_cmd,
             'heater': self.handle_heater,
-            'config': self.handle_config}
+            'config': self.handle_config,
+            'plugin': self.handle_plugin,
+        }
 
         self.client = MQTTClient(
             self.client_id, self.mserver, user=self.user, password=self.password)
@@ -175,6 +191,11 @@ class MyIotPrj:
         self.topic_ctl = 'compostlab/{}/response'.format(
             equipment_key).encode()
         self.topic_sta = 'compostlab/{}/{}/{}'
+
+    def handle_plugin(self, cmd):
+        print('save_command')
+        print(cmd)
+        save_command(cmd['file_name'], cmd['content'])
 
     def handle_cmd(self, cmd):
         print('cmd:{}'.format(cmd))
