@@ -1,5 +1,6 @@
 from mqtt import MQTTClient
 
+from . import *
 import ds18x20
 import machine
 import onewire
@@ -49,8 +50,7 @@ class RemoteControl():
         self.buttons[button].execute()
 
 
-def load_plugin():
-    pass
+def load_plugin(re):
 
 
 def read_config():
@@ -289,6 +289,7 @@ def main():
     wlan_connect(wifi_name, wifi_password)
     sync_ntp()
     mip = MyIotPrj()
+    re = RemoteControl()
     loop = asyncio.get_event_loop()
 
     # 循环协程运行主程序和上传数据程序
