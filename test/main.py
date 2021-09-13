@@ -1,6 +1,5 @@
 from mqtt import MQTTClient
 
-from . import *
 import ds18x20
 import machine
 import onewire
@@ -11,6 +10,9 @@ import utime as time
 
 from reset import Reset
 from heater import Heater
+
+heater = Heater()
+reset = Reset()
 
 # 参数设置
 config = {
@@ -27,7 +29,7 @@ value_skip = []
 post_interval = 60
 ntp_host = []
 ntp_interval = 1000
-plugin = ['reset', 'heater']
+# plugin = ['reset', 'heater']
 
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)
@@ -48,9 +50,6 @@ class RemoteControl():
     def on_command(self, button):
         # 当按键被触发时执行命令
         self.buttons[button].execute()
-
-
-def load_plugin(re):
 
 
 def read_config():
@@ -200,7 +199,7 @@ class MyIotPrj:
     def handle_cmd(self, cmd):
         print('cmd:{}'.format(cmd))
         if cmd == "reset":
-            Reset().execute()
+            reset.execute()
         else:
             pass
 
@@ -209,13 +208,13 @@ class MyIotPrj:
 
     def handle_heater(self, cmd):
         if cmd == 'on':
-            Heater().execute()
+            heater.execute()
         elif cmd == 'off':
-            Heater().undo()
+            heater.undo()
         else:
             pass
 
-    def do_cmd(self, cmd):
+    async def do_cmd(self, cmd):
         try:
             cmd_dict = json.loads(cmd)
             for key, value in cmd_dict.items():
@@ -226,7 +225,7 @@ class MyIotPrj:
             print('cmd error')
 
     async def sub_callback(self, topic, msg):
-        self.do_cmd(msg)
+        await self.do_cmd(msg)
 
     async def mqtt_main_thread(self):
         '''
@@ -287,9 +286,8 @@ class MyIotPrj:
 def main():
     read_config()
     wlan_connect(wifi_name, wifi_password)
-    sync_ntp()
+    # sync_ntp()
     mip = MyIotPrj()
-    re = RemoteControl()
     loop = asyncio.get_event_loop()
 
     # 循环协程运行主程序和上传数据程序
