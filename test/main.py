@@ -11,29 +11,6 @@ import utime as time
 from reset import Reset
 from heater import Heater
 
-heater = Heater()
-reset = Reset()
-
-# 参数设置
-config = {
-
-}
-equipment_key = ''
-wifi_name = ''
-wifi_password = ''
-mqtt_user = ''
-mqtt_password = ''
-mqtt_server = ''
-keys = []
-value_skip = []
-post_interval = 60
-ntp_host = []
-ntp_interval = 1000
-# plugin = ['reset', 'heater']
-
-ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
-ds = ds18x20.DS18X20(ow)
-
 
 class RemoteControl():
     '''
@@ -50,6 +27,36 @@ class RemoteControl():
     def on_command(self, button):
         # 当按键被触发时执行命令
         self.buttons[button].execute()
+
+    def on_undo(self, button):
+        self.buttons[button].undo()
+
+
+heater = Heater()
+reset = Reset()
+
+rc = RemoteControl()
+rc.set_command('heater', heater)
+rc.set_command('reset', reset)
+
+# 参数设置
+config = {
+
+}
+equipment_key = ''
+wifi_name = ''
+wifi_password = ''
+mqtt_user = ''
+mqtt_password = ''
+mqtt_server = ''
+keys = []
+value_skip = []
+post_interval = 60
+ntp_host = []
+ntp_interval = 1000
+
+ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
+ds = ds18x20.DS18X20(ow)
 
 
 def read_config():
@@ -197,9 +204,8 @@ class MyIotPrj:
         save_command(cmd['file_name'], cmd['content'])
 
     def handle_cmd(self, cmd):
-        print('cmd:{}'.format(cmd))
         if cmd == "reset":
-            reset.execute()
+            rc.on_command('reset')
         else:
             pass
 
@@ -208,9 +214,9 @@ class MyIotPrj:
 
     def handle_heater(self, cmd):
         if cmd == 'on':
-            heater.execute()
+            rc.on_command('heater')
         elif cmd == 'off':
-            heater.undo()
+            rc.on_undo('heater')
         else:
             pass
 
@@ -266,14 +272,14 @@ class MyIotPrj:
             t1 = time.ticks_ms()
             if self.isconn == True:
                 datas = {"data": []}
-                for temp, key in get_temp():
-                    if temp in value_skip:
-                        continue
-                    data = {"value": temp,
-                            "key": key,
-                            "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                    datas["data"].append(data)
-                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
+                # for temp, key in get_temp():
+                #     if temp in value_skip:
+                #         continue
+                #     data = {"value": temp,
+                #             "key": key,
+                #             "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                #     datas["data"].append(data)
+                await self.client.publish(self.topic_sta.format(equipment_key, 'test', 'data').encode(), json.dumps(datas), retain=False)
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
@@ -292,7 +298,7 @@ def main():
 
     # 循环协程运行主程序和上传数据程序
     loop.create_task(mip.mqtt_main_thread())
-    # loop.create_task(mip.mqtt_upload_thread())
+    loop.create_task(mip.mqtt_upload_thread())
     loop.run_forever()
 
 
