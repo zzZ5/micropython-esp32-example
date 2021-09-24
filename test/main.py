@@ -137,6 +137,12 @@ def sync_ntp():
                 continue
 
 
+def median(data):
+    data.sort()
+    half = len(data) // 2
+    return data[half]
+
+
 def wlan_connect(ssid, password):
     '''
     连接网络。
@@ -272,13 +278,14 @@ class MyIotPrj:
             t1 = time.ticks_ms()
             if self.isconn == True:
                 datas = {"data": []}
-                # for temp, key in get_temp():
-                #     if temp in value_skip:
-                #         continue
-                #     data = {"value": temp,
-                #             "key": key,
-                #             "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                #     datas["data"].append(data)
+                for temp, key in get_temp():
+                    if temp in value_skip:
+                        continue
+                    data = {"value": temp,
+                            "key": key,
+                            "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                    datas["data"].append(data)
+                print(datas)
                 await self.client.publish(self.topic_sta.format(equipment_key, 'test', 'data').encode(), json.dumps(datas), retain=False)
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
@@ -292,7 +299,7 @@ class MyIotPrj:
 def main():
     read_config()
     wlan_connect(wifi_name, wifi_password)
-    # sync_ntp()
+    sync_ntp()
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
 
