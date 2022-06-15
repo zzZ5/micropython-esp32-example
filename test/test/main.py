@@ -136,6 +136,11 @@ def get_temp():
         time.sleep_ms(1)
         machine.reset()
 
+    # test数据
+    # data = [25.2, 25.2, 25.2, 25.2, 25.2, 25.2]
+    # for i, key in zip(data, keys):
+    #     yield i, key
+
 
 def control_heat(cmd):
     global heat
