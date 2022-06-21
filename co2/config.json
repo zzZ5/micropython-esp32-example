@@ -1,0 +1,12 @@
+{
+    "equipment_key": "test",
+    "wifi_name": "Compostlab",
+    "wifi_password": "znxk8888",
+    "mqtt_user": "equipment",
+    "mqtt_password": "ZNXK8888",
+    "mqtt_server": "118.25.108.254",
+    "keys": ["test"],
+    "post_interval": 20,
+    "ntp_host": ["ntp.aliyun.com", "cn.ntp.org.cn", "ntp.tuna.tsinghua.edu.cn"],
+    "ntp_interval": 1000
+}
