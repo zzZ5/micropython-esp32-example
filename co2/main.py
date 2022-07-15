@@ -4,6 +4,7 @@ from mqtt import MQTTClient
 import uasyncio as asyncio
 import ujson as json
 import utime as time
+import machine
 from machine import Pin, I2C
 
 # 参数设置
@@ -120,11 +121,10 @@ class MyIotPrj:
         self.password = mqtt_password
         self.client_id = equipment_key
         self.mserver = mqtt_server
-
+        self.co2 = 400
         # 指令响应，针对不同的指令调用不同的方法。
         self.cmd_lib = {
             'cmd': self.handle_cmd,
-            'heater': self.handle_heater,
             'config': self.handle_config,
         }
 
@@ -144,14 +144,6 @@ class MyIotPrj:
 
     def handle_config(self, cmd):
         update_config(cmd)
-
-    def handle_heater(self, cmd):
-        if cmd == 'on':
-            control_heat(True)
-        elif cmd == 'off':
-            control_heat(False)
-        else:
-            pass
 
     async def do_cmd(self, cmd):
         try:
@@ -205,8 +197,10 @@ class MyIotPrj:
         while True:
             t1 = time.ticks_ms()
             if self.isconn == True:
-                datas = {"data": [{"CO2": get_co2()}]}
-                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
+                data = {"value": self.co2,
+                        "key": keys[0],
+                        "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(data), retain=False)
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
@@ -214,6 +208,15 @@ class MyIotPrj:
             if self.isconn == True:
                 await self.client.ping()
             await asyncio.sleep(5)
+
+    async def get_co2_thread(self):
+        while True:
+            try:
+                self.co2 = get_co2()
+            except:
+                time.sleep_ms(1)
+                machine.reset()
+            await asyncio.sleep(10)
 
 
 i2c = I2C(0)
@@ -253,8 +256,7 @@ baseline_time = time.time()
 
 def get_co2():
     '''
-    获取传感器温度数据。
-    扫描总线以及配置的keys，确保key和温度一一匹配。
+    获取传感器CO2数据
     '''
     co2eq, tvoc = sgp30.iaq_measure()
     print('co2eq = ' + str(co2eq) + ' ppm \t tvoc = ' + str(tvoc) + ' ppb')
@@ -297,6 +299,7 @@ def main():
     # 循环协程运行主程序和上传数据程序
     loop.create_task(mip.mqtt_main_thread())
     loop.create_task(mip.mqtt_upload_thread())
+    loop.create_task(mip.get_co2_thread())
     loop.run_forever()
 
 

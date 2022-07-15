@@ -82,4 +82,4 @@ while True:
             print('Impossible to write SGP30 baselines!')
 
     # A measurement should be done every 60 seconds, according to the doc.
-    time.sleep(5)
+    time.sleep(10)

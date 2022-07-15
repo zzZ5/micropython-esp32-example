@@ -10,5 +10,5 @@
     "post_interval": 60,
     "ntp_host": ["ntp.aliyun.com", "cn.ntp.org.cn", "ntp.tuna.tsinghua.edu.cn"],
     "ntp_interval": 1000,
-    "temp_maxdif": 1
+    "temp_maxdif": 0.5
 }

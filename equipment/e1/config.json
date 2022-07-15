@@ -1,7 +1,7 @@
 {
     "equipment_key": "4q9CMzqMBV",
-    "wifi_name": "HW",
-    "wifi_password": "ZNXK8888",
+    "wifi_name": "Compostlab",
+    "wifi_password": "znxk8888",
     "mqtt_user": "equipment",
     "mqtt_password": "ZNXK8888",
     "mqtt_server": "118.25.108.254",
