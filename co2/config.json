@@ -5,8 +5,14 @@
     "mqtt_user": "equipment",
     "mqtt_password": "ZNXK8888",
     "mqtt_server": "118.25.108.254",
-    "keys": ["SR3gzuT3ZK9qdgx"],
-    "post_interval": 30,
-    "ntp_host": ["ntp.aliyun.com", "cn.ntp.org.cn", "ntp.tuna.tsinghua.edu.cn"],
+    "keys": [
+        "SR3gzuT3ZK9qdgx"
+    ],
+    "post_interval": 20,
+    "ntp_host": [
+        "ntp.aliyun.com",
+        "cn.ntp.org.cn",
+        "ntp.tuna.tsinghua.edu.cn"
+    ],
     "ntp_interval": 1000
 }
