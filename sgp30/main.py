@@ -60,9 +60,9 @@ while True:
 
     # Baselines should be saved after 12 hour the first timen then every hour,
     # according to the doc.
-    if (has_baseline and (time.time() - baseline_time >= 3600)) \
-            or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
-
+    # if (has_baseline and (time.time() - baseline_time >= 3600)) \
+    #         or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
+    if (time.time() - baseline_time >= 3600):
         print('Saving baseline!')
         baseline_time = time.time()
 
