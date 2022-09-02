@@ -1,0 +1,28 @@
+{
+    "equipment_key": "beFuB14P5O",
+    "wifi_name": "Compostlab",
+    "wifi_password": "znxk8888",
+    "mqtt_user": "equipment",
+    "mqtt_password": "ZNXK8888",
+    "mqtt_server": "118.25.108.254",
+    "keys": [
+        "qU2Ft5oHzgcmJsN",
+        "zSSrr74tuPtzNz1",
+        "7De59ytQ7RaAsOb",
+        "T3EL3wkgFlBoQdq",
+        "H3VjHpo1JtshjVQ",
+        "6YSczzEhhpBEaW7"
+    ],
+    "value_skip": [
+        25.0,
+        85.0
+    ],
+    "post_interval": 60,
+    "ntp_host": [
+        "ntp.aliyun.com",
+        "cn.ntp.org.cn",
+        "ntp.tuna.tsinghua.edu.cn"
+    ],
+    "ntp_interval": 1000,
+    "temp_maxdif": 0.25
+}
