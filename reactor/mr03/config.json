@@ -5,17 +5,21 @@
     "mqtt_user": "equipment",
     "mqtt_password": "ZNXK8888",
     "mqtt_server": "118.25.108.254",
-    "keys": [
-        "9wE6kyGTteqwOlB",
-        "yre5PJVOnd4LGkR",
-        "Z35ZgepTVlOIeKS",
-        "ly6nMf8M9SDgE6h",
-        "jaGPanFRwQSKeaZ",
-        "ApG3M0cdbXAtB7o"
-    ],
+    "keys": {
+        "ds": [
+            "9wE6kyGTteqwOlB",
+            "yre5PJVOnd4LGkR",
+            "Z35ZgepTVlOIeKS",
+            "ly6nMf8M9SDgE6h",
+            "jaGPanFRwQSKeaZ",
+            "ApG3M0cdbXAtB7o"
+        ],
+        "sgp": "sddkmfqkBURFtjA"
+    },
     "value_skip": [
         25.0,
-        85.0
+        85.0,
+        400
     ],
     "post_interval": 60,
     "ntp_host": [
