@@ -32,13 +32,17 @@ ds = ds18x20.DS18X20(ow)  # 创建ds18b20传感器
 
 
 # 二氧化碳传感器
-i2c = I2C(0)
-i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
-sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
-baseline_time = time.time()
+try:
+    i2c = I2C(0)
+    i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
+    sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
+    baseline_time = time.time()
+except:
+    time.sleep_ms(1)
+    machine.reset()
 
 # 继电器
-pin2 = Pin(2, Pin.OUT, value=1)
+pin2 = Pin(2, Pin.OUT, value=0)
 heat = True  # 当前是否正在加热
 
 
@@ -143,7 +147,11 @@ def init_sgp():
     初始化spg30传感器
     '''
     print("初始化spg30传感器......")
-    sgp30.iaq_init()
+    try:
+        sgp30.iaq_init()
+    except:
+        time.sleep_ms(1)
+        machine.reset()
     print("Waiting 15 seconds for SGP30 initialization.")
     time.sleep(15)
     print("spg30传感器初始化成功！")
@@ -171,14 +179,14 @@ def get_CO2():
     获取sgp30传感器的CO2数据。
     '''
     global baseline_time
-    co2eq, tvoc = sgp30.iaq_measure()
+    try:
+        co2eq, tvoc = sgp30.iaq_measure()
 
-    if (time.time() - baseline_time >= 3600):
-        print('Saving baseline!')
+        if (time.time() - baseline_time >= 3600):
+            print('Saving baseline!')
 
-        baseline_time = time.time()
+            baseline_time = time.time()
 
-        try:
             f_co2 = open('co2eq_baseline.txt', 'w')
             f_tvoc = open('tvoc_baseline.txt', 'w')
 
@@ -189,10 +197,11 @@ def get_CO2():
             f_co2.close()
             f_tvoc.close()
 
-        except:
-            print('Impossible to write SGP30 baselines!')
+        return co2eq, keys['sgp']
 
-    return co2eq, keys['sgp']
+    except:
+        time.sleep_ms(1)
+        machine.reset()
 
 
 def control_heat(cmd):
@@ -304,14 +313,16 @@ class MyIotPrj:
             if self.isconn == True:
                 datas = {"data": []}
                 # 添加温度数据
+                num_skip = 0
                 for temp_value, temp_key in get_temp():
                     if temp_value in value_skip:
-                        continue
+                        num_skip += 1
                     data_temp = {"value": temp_value,
                                  "key": temp_key,
                                  "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
                     datas["data"].append(data_temp)
-
+                if num_skip == len(keys["ds"]):
+                    datas["data"] = []
                 # 控制加热开关
                 data_inside, data_outside = split_temp(datas["data"])
                 if compare(data_inside, data_outside):
@@ -342,7 +353,10 @@ class MyIotPrj:
 
 
 def split_temp(datas):
-    assert len(datas) % 2 == 0, 'Temperature data is not even.'
+    if len(datas) % 2 != 0:
+        print('Temperature data is not even.')
+        time.sleep_ms(1)
+        machine.reset()
     mid = len(datas) // 2
     data1 = []
     data2 = []
