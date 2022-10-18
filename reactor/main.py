@@ -428,9 +428,10 @@ def median(data):
 
 
 def compare(temp1, temp2):
-    temp_dif = median(temp1) - median(temp2)
-    # temp_dif = -temp_dif if temp_dif < 0 else temp_dif
-    # print("temp1: {} temp2: {}, dif: {}".format(temp1, temp2, temp_dif))
+    median_temp1 = median(temp1)
+    median_temp2 = median(temp2)
+    temp_dif = median_temp1 - median_temp2
+    temp_maxdif = (median1/40) ^ 2
     if temp_dif >= temp_maxdif:
         return 1
     else:
