@@ -1,11 +1,13 @@
 import adafruit_sgp30
 from mqtt import MQTTClient
 
+import ds18x20
+import machine
+import onewire
 import uasyncio as asyncio
 import ujson as json
 import utime as time
-import machine
-from machine import Pin, I2C
+from machine import I2C, Pin
 
 # 参数设置
 config = {
@@ -18,9 +20,50 @@ mqtt_user = ''
 mqtt_password = ''
 mqtt_server = ''
 keys = []
+value_skip = []
 post_interval = 60
 ntp_host = []
 ntp_interval = 1000
+temp_maxdif = 5
+
+ERROR_LEVEL = ["DEBUG", "INFO", "WARN",  "ERROR", "FATAL"]
+
+
+def write_error(msg, err_lev=3):
+    '''.
+    记录错误信息。
+    '''
+    open_mode = 'w'
+
+    # 错误文件过大就覆盖掉
+    try:
+        with open("error.log") as f:
+            if len(f.readlines()) < 100:
+                open_mode = 'a'
+    except:
+        pass
+
+    try:
+        with open("error.log", open_mode) as f:
+            f.write(ERROR_LEVEL[err_lev] + ": " + msg +
+                    " --{}-{}-{} {}:{}:{}".format(*time.localtime()) + "\n")
+    except:
+        time.sleep_ms(1)
+        machine.reset()
+    return
+
+
+# 二氧化碳传感器
+try:
+    i2c = I2C(0)
+    i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
+    sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
+    baseline_time = time.time()
+    has_baseline = False
+except:
+    time.sleep_ms(1)
+    write_error("二氧化碳传感器连接失败。")
+    machine.reset()
 
 
 def read_config():
@@ -39,9 +82,13 @@ def read_config():
         mqtt_password = config['mqtt_password']
         mqtt_server = config['mqtt_server']
         keys = config['keys']
+        value_skip = config['value_skip']
         post_interval = config['post_interval']
         ntp_host = config['ntp_host']
         ntp_interval = config['ntp_interval']
+        temp_maxdif = config['temp_maxdif']
+
+    print("配置文件提取完成！")
 
 
 def update_config(new_config, restart=False):
@@ -70,6 +117,7 @@ def sync_ntp():
     通过网络校准时间。
     '''
 
+    print("开始校准时间......")
     import ntptime
     ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
     is_setted = False
@@ -86,9 +134,11 @@ def sync_ntp():
                 time.sleep_ms(ntp_interval)
                 if times > 30:
                     time.sleep_ms(1)
+                    write_error("时间校准失败。")
                     machine.reset()
                 times += 1
                 continue
+    print("时间校准完成！")
 
 
 def wlan_connect(ssid, password):
@@ -100,6 +150,7 @@ def wlan_connect(ssid, password):
         password: wifi密码。
     '''
 
+    print("开始连接网络......")
     import network
     wlan = network.WLAN(network.STA_IF)
     if not wlan.active() or not wlan.isconnected():
@@ -109,6 +160,71 @@ def wlan_connect(ssid, password):
         while not wlan.isconnected():
             pass
     print('network config:', wlan.ifconfig())
+    print("网络连接成功！")
+
+
+def init_sgp():
+    '''
+    初始化spg30传感器
+    '''
+    print("初始化spg30传感器......")
+    try:
+        sgp30.iaq_init()
+    except:
+        time.sleep_ms(1)
+        write_error("sgp30传感器初始化失败。")
+        machine.reset()
+    print("Waiting 15 seconds for SGP30 initialization.")
+    time.sleep(15)
+
+    global has_baseline
+    try:
+        f_co2 = open('co2eq_baseline.txt', 'r')
+        f_tvoc = open('tvoc_baseline.txt', 'r')
+        co2_baseline = int(f_co2.read())
+        tvoc_baseline = int(f_tvoc.read())
+        # Use them to calibrate the sensor
+        sgp30.set_iaq_baseline(co2_baseline, tvoc_baseline)
+
+        f_co2.close()
+        f_tvoc.close()
+        has_baseline = True
+    except:
+        pass
+    print("spg30传感器初始化成功！")
+
+
+def get_CO2():
+    '''
+    获取sgp30传感器的CO2数据。
+    '''
+    global baseline_time, has_baseline
+    try:
+        co2eq, tvoc = sgp30.iaq_measure()
+
+        if (has_baseline and (time.time() - baseline_time >= 3600)) \
+                or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
+            print('Saving baseline!')
+
+            baseline_time = time.time()
+
+            f_co2 = open('co2eq_baseline.txt', 'w')
+            f_tvoc = open('tvoc_baseline.txt', 'w')
+
+            bl_co2, bl_tvoc = sgp30.get_iaq_baseline()
+            f_co2.write(str(bl_co2))
+            f_tvoc.write(str(bl_tvoc))
+
+            f_co2.close()
+            f_tvoc.close()
+            has_baseline = True
+
+        return co2eq, keys['sgp']
+
+    except:
+        time.sleep_ms(1)
+        write_error("获取二氧化碳数据失败。")
+        machine.reset()
 
 
 class MyIotPrj:
@@ -121,7 +237,7 @@ class MyIotPrj:
         self.password = mqtt_password
         self.client_id = equipment_key
         self.mserver = mqtt_server
-        self.co2 = 400
+
         # 指令响应，针对不同的指令调用不同的方法。
         self.cmd_lib = {
             'cmd': self.handle_cmd,
@@ -169,19 +285,20 @@ class MyIotPrj:
             if conn_ret_code != 0:
                 return
 
+            print("开始连接MQTT服务器......")
             print('conn_ret_code = {0}'.format(conn_ret_code))
-
             await self.client.subscribe(self.topic_ctl)
             print("Connected to {}, subscribed to {} topic".format(
                 self.mserver, self.topic_ctl))
-
             self.isconn = True
+            print("MQTT服务器连接成功！开始监听数据......")
 
             while True:
                 await self.client.wait_msg()
                 await asyncio.sleep(1)
         except:
             time.sleep_ms(1)
+            write_error("连接MQTT服务器失败。")
             machine.reset()
 
         finally:
@@ -197,10 +314,19 @@ class MyIotPrj:
         while True:
             t1 = time.ticks_ms()
             if self.isconn == True:
-                data = {"value": self.co2,
-                        "key": keys[0],
-                        "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(data), retain=False)
+                datas = {"data": []}
+
+                co2_value, co2_key = get_CO2()
+                if co2_value not in value_skip:
+                    data_co2 = {"value": co2_value,
+                                "key": co2_key,
+                                "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                    datas["data"].append(data_co2)
+
+                # print("上传数据：")
+                # print(datas["data"])
+                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
+
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
             await asyncio.sleep_ms(sleep_time)
@@ -209,99 +335,18 @@ class MyIotPrj:
                 await self.client.ping()
             await asyncio.sleep(5)
 
-    async def get_co2_thread(self):
-        while True:
-            try:
-                self.co2 = get_co2()
-            except:
-                time.sleep_ms(1)
-                machine.reset()
-            await asyncio.sleep(10)
-
-
-i2c = I2C(0)
-i2c = I2C(1, scl=Pin(5), sda=Pin(4), freq=100000)
-
-# Create library object on our I2C port
-sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)
-
-print("SGP30 serial #", [hex(i) for i in sgp30.serial])
-
-# Initialize SGP-30 internal drift compensation algorithm.
-sgp30.iaq_init()
-# Wait 15 seconds for the SGP30 to properly initialize
-print("Waiting 15 seconds for SGP30 initialization.")
-time.sleep(15)
-# Retrieve previously stored baselines, if any (helps the compensation algorithm).
-has_baseline = False
-# try:
-#     f_co2 = open('co2eq_baseline.txt', 'r')
-#     f_tvoc = open('tvoc_baseline.txt', 'r')
-
-#     co2_baseline = int(f_co2.read())
-#     tvoc_baseline = int(f_tvoc.read())
-#     # Use them to calibrate the sensor
-#     sgp30.set_iaq_baseline(co2_baseline, tvoc_baseline)
-
-#     f_co2.close()
-#     f_tvoc.close()
-
-#     has_baseline = True
-# except:
-#     print('Impossible to read SGP30 baselines!')
-
-# Store the time at which last baseline has been saved
-baseline_time = time.time()
-
-
-def get_co2():
-    '''
-    获取传感器CO2数据
-    '''
-    co2eq, tvoc = sgp30.iaq_measure()
-    print('co2eq = ' + str(co2eq) + ' ppm \t tvoc = ' + str(tvoc) + ' ppb')
-
-    # Baselines should be saved after 12 hour the first timen then every hour,
-    # according to the doc.
-    global has_baseline
-    global baseline_time
-    # if (has_baseline and (time.time() - baseline_time >= 3600)) \
-    #         or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
-    if (time.time() - baseline_time >= 3600):
-        print('Saving baseline!')
-        baseline_time = time.time()
-
-        try:
-            f_co2 = open('co2eq_baseline.txt', 'w')
-            f_tvoc = open('tvoc_baseline.txt', 'w')
-
-            bl_co2, bl_tvoc = sgp30.get_iaq_baseline()
-            f_co2.write(str(bl_co2))
-            f_tvoc.write(str(bl_tvoc))
-
-            f_co2.close()
-            f_tvoc.close()
-
-            has_baseline = True
-        except:
-            print('Impossible to write SGP30 baselines!')
-            time.sleep_ms(1)
-            machine.reset()
-
-    return co2eq
-
 
 def main():
     read_config()
     wlan_connect(wifi_name, wifi_password)
     sync_ntp()
+    init_sgp()
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
 
     # 循环协程运行主程序和上传数据程序
     loop.create_task(mip.mqtt_main_thread())
     loop.create_task(mip.mqtt_upload_thread())
-    loop.create_task(mip.get_co2_thread())
     loop.run_forever()
 
 

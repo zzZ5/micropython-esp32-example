@@ -26,6 +26,33 @@ ntp_host = []
 ntp_interval = 1000
 temp_maxdif = 5
 
+ERROR_LEVEL = ["DEBUG", "INFO", "WARN",  "ERROR", "FATAL"]
+
+
+def write_error(msg, err_lev=3):
+    '''.
+    记录错误信息。
+    '''
+    open_mode = 'w'
+
+    # 错误文件过大就覆盖掉
+    try:
+        with open("error.log") as f:
+            if len(f.readlines()) < 100:
+                open_mode = 'a'
+    except:
+        pass
+
+    try:
+        with open("error.log", open_mode) as f:
+            f.write(ERROR_LEVEL[err_lev] + ": " + msg +
+                    " --{}-{}-{} {}:{}:{}".format(*time.localtime()) + "\n")
+    except:
+        time.sleep_ms(1)
+        machine.reset()
+    return
+
+
 # 温度传感器
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)  # 创建ds18b20传感器
@@ -37,8 +64,10 @@ try:
     i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
     sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
     baseline_time = time.time()
+    has_baseline = False
 except:
     time.sleep_ms(1)
+    write_error("二氧化碳传感器连接失败。")
     machine.reset()
 
 # 继电器
@@ -114,6 +143,7 @@ def sync_ntp():
                 time.sleep_ms(ntp_interval)
                 if times > 30:
                     time.sleep_ms(1)
+                    write_error("时间校准失败。")
                     machine.reset()
                 times += 1
                 continue
@@ -151,9 +181,25 @@ def init_sgp():
         sgp30.iaq_init()
     except:
         time.sleep_ms(1)
+        write_error("sgp30传感器初始化失败。")
         machine.reset()
     print("Waiting 15 seconds for SGP30 initialization.")
     time.sleep(15)
+
+    global has_baseline
+    try:
+        f_co2 = open('co2eq_baseline.txt', 'r')
+        f_tvoc = open('tvoc_baseline.txt', 'r')
+        co2_baseline = int(f_co2.read())
+        tvoc_baseline = int(f_tvoc.read())
+        # Use them to calibrate the sensor
+        sgp30.set_iaq_baseline(co2_baseline, tvoc_baseline)
+
+        f_co2.close()
+        f_tvoc.close()
+        has_baseline = True
+    except:
+        pass
     print("spg30传感器初始化成功！")
 
 
@@ -171,6 +217,7 @@ def get_temp():
             yield ds.read_temp(i), key
     except:
         time.sleep_ms(1)
+        write_error("获取温度数据失败。")
         machine.reset()
 
 
@@ -178,11 +225,12 @@ def get_CO2():
     '''
     获取sgp30传感器的CO2数据。
     '''
-    global baseline_time
+    global baseline_time, has_baseline
     try:
         co2eq, tvoc = sgp30.iaq_measure()
 
-        if (time.time() - baseline_time >= 3600):
+        if (has_baseline and (time.time() - baseline_time >= 3600)) \
+                or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
             print('Saving baseline!')
 
             baseline_time = time.time()
@@ -196,11 +244,13 @@ def get_CO2():
 
             f_co2.close()
             f_tvoc.close()
+            has_baseline = True
 
         return co2eq, keys['sgp']
 
     except:
         time.sleep_ms(1)
+        write_error("获取二氧化碳数据失败。")
         machine.reset()
 
 
@@ -296,6 +346,7 @@ class MyIotPrj:
                 await asyncio.sleep(1)
         except:
             time.sleep_ms(1)
+            write_error("连接MQTT服务器失败。")
             machine.reset()
 
         finally:
@@ -354,8 +405,8 @@ class MyIotPrj:
 
 def split_temp(datas):
     if len(datas) % 2 != 0:
-        print('Temperature data is not even.')
         time.sleep_ms(1)
+        write_error("内外温度数据量不匹配。")
         machine.reset()
     mid = len(datas) // 2
     data1 = []

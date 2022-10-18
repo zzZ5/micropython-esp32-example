@@ -224,14 +224,19 @@ class MyIotPrj:
         while True:
             t1 = time.ticks_ms()
             if self.isconn == True:
+
                 datas = {"data": []}
-                for temp, key in get_temp():
-                    if temp in value_skip:
-                        continue
-                    data = {"value": temp,
-                            "key": key,
-                            "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                    datas["data"].append(data)
+                # 添加温度数据
+                num_skip = 0
+                for temp_value, temp_key in get_temp():
+                    if temp_value in value_skip:
+                        num_skip += 1
+                    data_temp = {"value": temp_value,
+                                 "key": temp_key,
+                                 "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                    datas["data"].append(data_temp)
+                if num_skip == len(keys):
+                    datas["data"] = []
                 await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
