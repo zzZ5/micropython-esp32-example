@@ -24,7 +24,6 @@ value_skip = []
 post_interval = 60
 ntp_host = []
 ntp_interval = 1000
-temp_maxdif = 5
 
 ERROR_LEVEL = ["DEBUG", "INFO", "WARN",  "ERROR", "FATAL"]
 
@@ -74,7 +73,7 @@ def read_config():
     with open("config.json") as f:
         global config
         config = json.load(f)
-        global equipment_key, wifi_name, wifi_password, mqtt_user, mqtt_password, mqtt_server, keys, value_skip, post_interval, ntp_host, ntp_interval, temp_maxdif
+        global equipment_key, wifi_name, wifi_password, mqtt_user, mqtt_password, mqtt_server, keys, value_skip, post_interval, ntp_host, ntp_interval
         equipment_key = config['equipment_key']
         wifi_name = config['wifi_name']
         wifi_password = config['wifi_password']
@@ -86,7 +85,6 @@ def read_config():
         post_interval = config['post_interval']
         ntp_host = config['ntp_host']
         ntp_interval = config['ntp_interval']
-        temp_maxdif = config['temp_maxdif']
 
     print("配置文件提取完成！")
 
