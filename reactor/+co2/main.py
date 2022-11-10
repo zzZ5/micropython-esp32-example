@@ -213,8 +213,11 @@ def get_temp():
         roms = ds.scan()  # 扫描总线上的设备
         assert len(roms) == len(keys["ds"]), 'The quantity does not match.'
         ds.convert_temp()  # 获取采样温度
-        for i, key in zip(roms, keys["ds"]):
-            yield ds.read_temp(i), key
+        list_temperature = []
+        for i, rank in zip(roms, keys["rank"]):
+            list_temperature.append([ds.read_temp(i), rank])
+        temp = sorted(list_temperature, key=lambda a: a[1])
+
     except:
         time.sleep_ms(1)
         write_error("获取温度数据失败。")
