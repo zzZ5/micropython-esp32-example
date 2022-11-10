@@ -165,16 +165,17 @@ def init_sgp():
     '''
     初始化spg30传感器
     '''
+    global baseline_time
     print("初始化spg30传感器......")
     try:
         sgp30.iaq_init()
+        baseline_time = time.time()
     except:
         time.sleep_ms(1)
         write_error("sgp30传感器初始化失败。")
         machine.reset()
     print("Waiting 15 seconds for SGP30 initialization.")
     time.sleep(15)
-
     global has_baseline
     try:
         f_co2 = open('co2eq_baseline.txt', 'r')

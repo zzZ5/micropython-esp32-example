@@ -5,10 +5,13 @@
     "mqtt_user": "equipment",
     "mqtt_password": "ZNXK8888",
     "mqtt_server": "118.25.108.254",
-    "keys": [
-        "SR3gzuT3ZK9qdgx"
-    ],
+    "keys": {
+        "sgp": "SR3gzuT3ZK9qdgx"
+    },
     "post_interval": 20,
+    "value_skip": [
+        57330
+    ],
     "ntp_host": [
         "ntp.aliyun.com",
         "cn.ntp.org.cn",
