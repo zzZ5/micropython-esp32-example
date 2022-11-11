@@ -7,12 +7,12 @@
     "mqtt_server": "118.25.108.254",
     "keys": {
         "ds": [
-            "uCYtujJ1txBMBq7",
-            "WE3TJJCMAmirZk7",
-            "W367cmGtIq9CIJV",
             "Fj5YSqDC6zQOt2V",
             "UYZrQnvqMJeWXmX",
-            "0Knn94Q3eg7TfTl"
+            "0Knn94Q3eg7TfTl",
+            "uCYtujJ1txBMBq7",
+            "WE3TJJCMAmirZk7",
+            "W367cmGtIq9CIJV"
         ],
         "sgp": "vV77btpyRkY1kyd"
     },
