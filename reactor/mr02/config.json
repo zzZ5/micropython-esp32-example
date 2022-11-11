@@ -14,6 +14,14 @@
             "WE3TJJCMAmirZk7",
             "W367cmGtIq9CIJV"
         ],
+        "rank": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+        ],
         "sgp": "vV77btpyRkY1kyd"
     },
     "value_skip": [
@@ -28,5 +36,5 @@
         "ntp.tuna.tsinghua.edu.cn"
     ],
     "ntp_interval": 1000,
-    "temp_maxdif": 5
+    "temp_maxdif": 0
 }
