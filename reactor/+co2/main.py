@@ -437,6 +437,8 @@ def compare(temp1, temp2):
     median_temp2 = median(temp2)
     if (not median_temp1) or (not median_temp2):
         return 0
+    if median_temp1 < 50:
+        return 1
     temp_dif = median_temp1 - median_temp2
     maxdif = ((median_temp1-temp_maxdif)/40) ** 2
     if temp_dif >= maxdif:
