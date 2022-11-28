@@ -1,5 +1,5 @@
 {
-    "equipment_key": "6HO5bjVrPg",
+    "equipment_key": "2ACQi7LT4u",
     "wifi_name": "zzz",
     "wifi_password": "znxk8888",
     "mqtt_user": "equipment",
@@ -16,7 +16,6 @@
         ],
         "sgp": "oQDNcDdz7q1JASi"
     },
-    "sgp_key": "",
     "value_skip": [
         25.0,
         85.0,
