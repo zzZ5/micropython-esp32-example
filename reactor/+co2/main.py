@@ -217,6 +217,8 @@ def get_temp():
         for i, rank in zip(roms, keys["rank"]):
             list_temperature.append([ds.read_temp(i), rank])
         temp = sorted(list_temperature, key=lambda a: a[1])
+        for i, key in zip(temp, keys["ds"]):
+            yield i[0], key
 
     except:
         time.sleep_ms(1)
@@ -435,9 +437,11 @@ def compare(temp1, temp2):
     median_temp2 = median(temp2)
     if (not median_temp1) or (not median_temp2):
         return 0
+    if median_temp1 < 50:
+        return 1
     temp_dif = median_temp1 - median_temp2
-    temp_maxdif = (median1/40) ** 2
-    if temp_dif >= temp_maxdif:
+    maxdif = ((median_temp1-temp_maxdif)/40) ** 2
+    if temp_dif >= maxdif:
         return 1
     else:
         return 0

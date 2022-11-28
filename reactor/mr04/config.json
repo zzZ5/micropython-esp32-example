@@ -14,12 +14,21 @@
             "P3Es3ffYVD2RRlr",
             "6gzqO4xB0Z0BMmC"
         ],
+        "rank": [
+            4,
+            5,
+            1,
+            2,
+            3,
+            6
+        ],
         "sgp": "qMjnQAB41PVNbEF"
     },
     "value_skip": [
         25.0,
         85.0,
-        400
+        400,
+        57330
     ],
     "post_interval": 60,
     "ntp_host": [
@@ -28,5 +37,5 @@
         "ntp.tuna.tsinghua.edu.cn"
     ],
     "ntp_interval": 1000,
-    "temp_maxdif": 5
+    "temp_maxdif": 0
 }
