@@ -53,26 +53,26 @@ def write_error(msg, err_lev=3):
     return
 
 
-# 温度传感器
-ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
-ds = ds18x20.DS18X20(ow)  # 创建ds18b20传感器
+# # 温度传感器
+# ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
+# ds = ds18x20.DS18X20(ow)  # 创建ds18b20传感器
 
 
-# 二氧化碳传感器
-try:
-    i2c = I2C(0)
-    i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
-    sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
-    baseline_time = time.time()
-    has_baseline = False
-except:
-    time.sleep_ms(1)
-    write_error("二氧化碳传感器连接失败。")
-    machine.reset()
+# # 二氧化碳传感器
+# try:
+#     i2c = I2C(0)
+#     i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
+#     sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
+#     baseline_time = time.time()
+#     has_baseline = False
+# except:
+#     time.sleep_ms(1)
+#     write_error("二氧化碳传感器连接失败。")
+#     machine.reset()
 
-# 继电器
-pin2 = Pin(2, Pin.OUT, value=0)
-heat = True  # 当前是否正在加热
+# # 继电器
+# pin2 = Pin(2, Pin.OUT, value=0)
+# heat = True  # 当前是否正在加热
 
 
 def read_config():
@@ -213,8 +213,11 @@ def get_temp():
         roms = ds.scan()  # 扫描总线上的设备
         assert len(roms) == len(keys["ds"]), 'The quantity does not match.'
         ds.convert_temp()  # 获取采样温度
-        for i, key in zip(roms, keys["ds"]):
-            yield ds.read_temp(i), key
+        list_temperature = []
+        for i, rank in zip(roms, keys["rank"]):
+            list_temperature.append([ds.read_temp(i), rank])
+        temp = sorted(list_temperature, key=lambda a: a[1])
+
     except:
         time.sleep_ms(1)
         write_error("获取温度数据失败。")
@@ -362,37 +365,12 @@ class MyIotPrj:
         while True:
             t1 = time.ticks_ms()
             if self.isconn == True:
-                datas = {"data": []}
-                # 添加温度数据
-                num_skip = 0
-                for temp_value, temp_key in get_temp():
-                    if temp_value in value_skip:
-                        num_skip += 1
-                    data_temp = {"value": temp_value,
-                                 "key": temp_key,
-                                 "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                    datas["data"].append(data_temp)
-                if num_skip == len(keys["ds"]):
-                    datas["data"] = []
-                # 控制加热开关
-                data_inside, data_outside = split_temp(datas["data"])
-                if compare(data_inside, data_outside):
-                    control_heat(True)
-                else:
-                    control_heat(False)
-                datas["info"] = {"heat": heat}
-
-                # 添加CO2数据 ps:顺序一定不能错，先添加温度数据，再控制开关，最后添加CO2数据
-                co2_value, co2_key = get_CO2()
-                if co2_value not in value_skip:
-                    data_co2 = {"value": co2_value,
-                                "key": co2_key,
-                                "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
-                    datas["data"].append(data_co2)
-
-                # print("上传数据：")
+                print("上传数据：")
                 # print(datas["data"])
-                await self.client.publish(self.topic_sta.format(equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
+                datas = {"data": []}
+                datas["msg"] = 'error'
+
+                await self.client.publish(self.topic_sta.format(equipment_key, 'alert', 'test').encode(), json.dumps(datas), retain=False)
 
             t2 = time.ticks_ms()
             sleep_time = post_interval * 1000 - (t2 - t1)
@@ -428,9 +406,12 @@ def median(data):
 
 
 def compare(temp1, temp2):
-    temp_dif = median(temp1) - median(temp2)
-    # temp_dif = -temp_dif if temp_dif < 0 else temp_dif
-    # print("temp1: {} temp2: {}, dif: {}".format(temp1, temp2, temp_dif))
+    median_temp1 = median(temp1)
+    median_temp2 = median(temp2)
+    if (not median_temp1) or (not median_temp2):
+        return 0
+    temp_dif = median_temp1 - median_temp2
+    temp_maxdif = (median1/40) ** 2
     if temp_dif >= temp_maxdif:
         return 1
     else:
@@ -441,7 +422,7 @@ def main():
     read_config()
     wlan_connect(wifi_name, wifi_password)
     sync_ntp()
-    init_sgp()
+    # init_sgp()
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
 
