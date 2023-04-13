@@ -14,12 +14,21 @@
             "sFen81BWUsChPtg",
             "NXXNXW36Yd16mk7"
         ],
+        "rank": [
+            4,
+            1,
+            5,
+            6,
+            2,
+            3
+        ],
         "sgp": "qfUXwfUUYxisgOf"
     },
     "value_skip": [
         25.0,
         85.0,
-        400
+        400,
+        57330
     ],
     "post_interval": 60,
     "ntp_host": [

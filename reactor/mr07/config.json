@@ -14,12 +14,21 @@
             "AQ3TghamoOxrRbx",
             "juWfpJP4TMgdkW4"
         ],
+        "rank": [
+            1,
+            2,
+            4,
+            5,
+            6,
+            3
+        ],
         "sgp": "0TU8jSEz5uHFM7X"
     },
     "value_skip": [
         25.0,
         85.0,
-        400
+        400,
+        57330
     ],
     "post_interval": 60,
     "ntp_host": [

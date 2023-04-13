@@ -1,3 +1,4 @@
+import adafruit_sgp30
 from mqtt import MQTTClient
 
 import ds18x20
@@ -7,7 +8,6 @@ import uasyncio as asyncio
 import ujson as json
 import utime as time
 from machine import I2C, Pin
-
 
 # 参数设置
 config = {
@@ -57,6 +57,18 @@ def write_error(msg, err_lev=3):
 ow = onewire.OneWire(machine.Pin(4))  # 创建onewire总线 引脚4（G4）
 ds = ds18x20.DS18X20(ow)  # 创建ds18b20传感器
 
+
+# 二氧化碳传感器
+try:
+    i2c = I2C(0)
+    i2c = I2C(1, scl=Pin(22), sda=Pin(21), freq=100000)
+    sgp30 = adafruit_sgp30.Adafruit_SGP30(i2c)  # 创建sgp30传感器 引脚22、21（G22、G21）
+    baseline_time = time.time()
+    has_baseline = False
+except:
+    time.sleep_ms(1)
+    write_error("二氧化碳传感器连接失败。")
+    machine.reset()
 
 # 继电器
 pin2 = Pin(2, Pin.OUT, value=0)
@@ -160,6 +172,39 @@ def wlan_connect(ssid, password):
     print("网络连接成功！")
 
 
+def init_sgp():
+    '''
+    初始化spg30传感器
+    '''
+    global baseline_time
+    print("初始化spg30传感器......")
+    try:
+        sgp30.iaq_init()
+        baseline_time = time.time()
+    except:
+        time.sleep_ms(1)
+        write_error("sgp30传感器初始化失败。")
+        machine.reset()
+    print("Waiting 15 seconds for SGP30 initialization.")
+    time.sleep(15)
+
+    global has_baseline
+    try:
+        f_co2 = open('co2eq_baseline.txt', 'r')
+        f_tvoc = open('tvoc_baseline.txt', 'r')
+        co2_baseline = int(f_co2.read())
+        tvoc_baseline = int(f_tvoc.read())
+        # Use them to calibrate the sensor
+        sgp30.set_iaq_baseline(co2_baseline, tvoc_baseline)
+
+        f_co2.close()
+        f_tvoc.close()
+        has_baseline = True
+    except:
+        pass
+    print("spg30传感器初始化成功！")
+
+
 def get_temp():
     '''
     获取传感器温度数据。
@@ -170,11 +215,49 @@ def get_temp():
         roms = ds.scan()  # 扫描总线上的设备
         assert len(roms) == len(keys["ds"]), 'The quantity does not match.'
         ds.convert_temp()  # 获取采样温度
-        for i, key in zip(roms, keys["ds"]):
-            yield ds.read_temp(i), key
+        list_temperature = []
+        for i, rank in zip(roms, keys["rank"]):
+            list_temperature.append([ds.read_temp(i), rank])
+        temp = sorted(list_temperature, key=lambda a: a[1])
+        for i, key in zip(temp, keys["ds"]):
+            yield i[0], key
+
     except:
         time.sleep_ms(1)
         write_error("获取温度数据失败。")
+        machine.reset()
+
+
+def get_CO2():
+    '''
+    获取sgp30传感器的CO2数据。
+    '''
+    global baseline_time, has_baseline
+    try:
+        co2eq, tvoc = sgp30.iaq_measure()
+
+        if (has_baseline and (time.time() - baseline_time >= 3600)) \
+                or ((not has_baseline) and (time.time() - baseline_time >= 43200)):
+            print('Saving baseline!')
+
+            baseline_time = time.time()
+
+            f_co2 = open('co2eq_baseline.txt', 'w')
+            f_tvoc = open('tvoc_baseline.txt', 'w')
+
+            bl_co2, bl_tvoc = sgp30.get_iaq_baseline()
+            f_co2.write(str(bl_co2))
+            f_tvoc.write(str(bl_tvoc))
+
+            f_co2.close()
+            f_tvoc.close()
+            has_baseline = True
+
+        return co2eq, keys['sgp']
+
+    except:
+        time.sleep_ms(1)
+        write_error("获取二氧化碳数据失败。")
         machine.reset()
 
 
@@ -296,7 +379,6 @@ class MyIotPrj:
                                  "key": temp_key,
                                  "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
                     datas["data"].append(data_temp)
-
                 if num_skip == len(keys["ds"]):
                     datas["data"] = []
                 # 控制加热开关
@@ -306,6 +388,14 @@ class MyIotPrj:
                 else:
                     control_heat(False)
                 datas["info"] = {"heat": heat}
+
+                # 添加CO2数据 ps:顺序一定不能错，先添加温度数据，再控制开关，最后添加CO2数据
+                co2_value, co2_key = get_CO2()
+                if co2_value not in value_skip:
+                    data_co2 = {"value": co2_value,
+                                "key": co2_key,
+                                "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
+                    datas["data"].append(data_co2)
 
                 # print("上传数据：")
                 # print(datas["data"])
@@ -349,6 +439,11 @@ def compare(temp1, temp2):
     median_temp2 = median(temp2)
     if (not median_temp1) or (not median_temp2):
         return 0
+    # if median_temp1 < 50:
+    #     if median_temp2 < 50:
+    #         return 1
+    #     else:
+    #         return 0
     temp_dif = median_temp1 - median_temp2
     maxdif = ((median_temp1-temp_maxdif)/40) ** 2
     if temp_dif >= maxdif:
@@ -361,6 +456,7 @@ def main():
     read_config()
     wlan_connect(wifi_name, wifi_password)
     sync_ntp()
+    init_sgp()
     mip = MyIotPrj()
     loop = asyncio.get_event_loop()
 
