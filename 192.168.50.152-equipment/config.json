@@ -1,0 +1,36 @@
+{
+	"version": "compostlabA",
+	"equipment_key": "lkaQYN55pF",
+	"wifi_name": "2222",
+	"wifi_password": "zihuan2222",
+	"mqtt_user": "equipmentA",
+	"mqtt_password": "ZNXK8888",
+	"mqtt_server": "118.25.108.254",
+	"keys": {
+		"ds": [
+			"PnJcRB3UBZjELmr",
+			"NQStzKnAT0wB1rN",
+			"OgCR71PwmegPtsJ",
+		],
+		"rank": [
+			1,
+			2,
+			3
+		],
+		"sgp": "QfF1XrvMAwuFLeC"
+	},
+	"value_skip": [
+		25.0,
+		85.0,
+		400,
+		57330
+	],
+	"post_interval": 60,
+	"ntp_host": [
+		"ntp.aliyun.com",
+		"cn.ntp.org.cn",
+		"ntp.tuna.tsinghua.edu.cn"
+	],
+	"ntp_interval": 1000,
+	"temp_maxdif": 0
+}
