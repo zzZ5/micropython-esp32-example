@@ -130,7 +130,7 @@ def sync_ntp():
 
     print("开始校准时间......")
     import ntptime
-    ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
+    # ntptime.NTP_DELTA = 3155644800  # 可选 UTC+8偏移时间（秒），不设置就是UTC0
     is_setted = False
     times = 0
     while not is_setted:
@@ -390,8 +390,8 @@ class MyIotPrj:
                                 "measured_time": "{}-{}-{} {}:{}:{}".format(*time.localtime())}
                     datas["data"].append(data_co2)
 
-                print("上传数据：")
-                print(datas["data"])
+                # print("上传数据：")
+                # print(datas["data"])
                 await self.client.publish(self.topic_sta.format(version, equipment_key, 'post', 'data').encode(), json.dumps(datas), retain=False)
 
             t2 = time.ticks_ms()
