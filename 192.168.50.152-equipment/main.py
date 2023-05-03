@@ -72,7 +72,7 @@ except:
     machine.reset()
 
 # 继电器
-pin2 = Pin(2, Pin.OUT, value=0)
+pin2 = Pin(2, Pin.OUT, value=1)
 heat = True  # 当前是否正在加热
 
 
@@ -266,11 +266,11 @@ def get_CO2():
 def control_heat(cmd):
     global heat
     if cmd == True:
-        pin2.on()
+        pin2.off()
         heat = True
         # print('heater on')
     else:
-        pin2.off()
+        pin2.on()
         heat = False
         # print('heater off')
 
