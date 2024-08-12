@@ -37,5 +37,9 @@
         "ntp.tuna.tsinghua.edu.cn"
     ],
     "ntp_interval": 1000,
-    "temp_maxdif": 0
+    "control_strategy": "auto",
+    "temp_maxdif": 0,
+    "temp_fixed": 0,
+    "aeration_interval": 20
+
 }
